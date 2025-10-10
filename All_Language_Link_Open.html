@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Open Multi-Language Links</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    input { margin: 5px 0; padding: 6px; width: 80%; }
+    button { margin-right: 10px; padding: 8px 14px; cursor: pointer; }
+    a { display: block; margin: 4px 0; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h3>Open Multi-Language URLs (Any Product)</h3>
+  
+  <div>
+    <label>Staging Link:<br>
+      <input id="src" placeholder="e.g. https://help-staging.autodesk.com/view/PLM/CHS/?guid=OLD_GUID">
+    </label>
+  </div>
+  <div>
+    <label>GUID:<br>
+      <input id="guid" placeholder="Enter new GUID, e.g. GS-CONNECT-TROUBLE">
+    </label>
+  </div>
+  <div>
+    <label>Languages (comma separated):<br>
+      <input id="langs" placeholder="ENU,DEU,FRA,CHS,ITA,JPN">
+    </label>
+  </div>
+  
+  <div style="margin-top:12px;">
+    <button id="build">Build Links</button>
+    <button id="openAll">Open All</button>
+  </div>
+
+  <p id="msg" style="color:green;"></p>
+  <ul id="links" style="margin-top:12px;"></ul>
+
+<script>
+const srcEl = document.getElementById('src');
+const guidEl = document.getElementById('guid');
+const langsEl = document.getElementById('langs');
+const listEl = document.getElementById('links');
+const msgEl = document.getElementById('msg');
+
+function buildLink(src, lang, guid) {
+  src = src.trim();
+
+  // Remove existing query string (?guid=...) if any
+  src = src.replace(/\?guid=.*$/i, '');
+
+  // Remove any trailing slash
+  src = src.replace(/\/+$/,'');
+
+  // Detect if the URL already has a language
+  // Matches last path segment for language
+  const langPattern = /(ENU|CHS|DEU|FRA|ITA|JPN)$/i;
+  const parts = src.split('/'); // split path
+  const lastPart = parts[parts.length - 1];
+
+  if (langPattern.test(lastPart)) {
+    // Replace last segment with target language
+    parts[parts.length - 1] = lang;
+  } else {
+    // Append target language
+    parts.push(lang);
+  }
+
+  // Reconstruct URL
+  const baseUrl = parts.join('/');
+  return `${baseUrl}/?guid=${encodeURIComponent(guid)}`;
+}
+
+document.getElementById('build').addEventListener('click', () => {
+  const src = srcEl.value.trim();
+  const guid = guidEl.value.trim();
+  const langs = langsEl.value.trim();
+  listEl.innerHTML = '';
+  msgEl.textContent = '';
+
+  if (!src) { alert('Please enter the staging link.'); return; }
+  if (!guid) { alert('Please enter a GUID.'); return; }
+
+  const langList = langs.split(',').map(l => l.trim().toUpperCase()).filter(Boolean);
+  if (!langList.length) { alert('Please enter at least one language.'); return; }
+
+  langList.forEach(lang => {
+    const url = buildLink(src, lang, guid);
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.textContent = url;
+    li.appendChild(a);
+    listEl.appendChild(li);
+  });
+
+  msgEl.textContent = `✅ ${langList.length} links built successfully. Click "Open All" or open manually (Ctrl+Click).`;
+});
+
+document.getElementById('openAll').addEventListener('click', () => {
+  const links = Array.from(listEl.querySelectorAll('a'));
+  if (!links.length) { alert('No links built yet.'); return; }
+
+  let opened = 0;
+  links.forEach(a => {
+    try {
+      a.click();
+      opened++;
+    } catch (e) {
+      console.warn('Could not open', a.href);
+    }
+  });
+
+  msgEl.textContent = `Attempted to open ${opened} tabs. If some did not open, hold Ctrl and click each link below.`;
+});
+</script>
+</body>
+</html>
